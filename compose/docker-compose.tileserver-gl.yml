@@ -1,0 +1,14 @@
+services:
+  engine:
+    image: maptiler/tileserver-gl-light:v5.6.0
+    command: ["--config", "/config/config.json", "--port", "8080"]
+    volumes:
+      - ../configs/tileserver-gl:/config:ro
+      - ../data/cache/archives:/tiles:ro
+    ports:
+      - "127.0.0.1:${ENGINE_PORT:-8099}:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G

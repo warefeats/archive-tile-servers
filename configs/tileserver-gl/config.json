@@ -1,0 +1,11 @@
+{
+  "options": {
+    "paths": { "root": "/tiles", "mbtiles": "/tiles", "pmtiles": "/tiles", "fonts": "/tiles", "sprites": "/tiles", "styles": "/tiles", "icons": "/tiles", "files": "/tiles" },
+    "serveAllFonts": false,
+    "serveStaticMaps": false
+  },
+  "styles": {},
+  "data": {
+    "berlin": { "mbtiles": "berlin.mbtiles" }
+  }
+}

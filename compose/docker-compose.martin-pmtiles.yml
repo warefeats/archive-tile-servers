@@ -1,0 +1,14 @@
+services:
+  engine:
+    image: ghcr.io/maplibre/martin:1.16.0
+    command: ["--config", "/config/config.yaml"]
+    volumes:
+      - ../configs/martin-pmtiles:/config:ro
+      - ../data/cache/archives:/tiles:ro
+    ports:
+      - "127.0.0.1:${ENGINE_PORT:-8099}:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G

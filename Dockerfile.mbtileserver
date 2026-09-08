@@ -1,0 +1,16 @@
+# mbtileserver v0.11.0 from the project's release binary: the published Docker image is amd64-only
+# and would run under emulation on arm64. The release binary links glibc, hence Debian rather than Alpine.
+FROM debian:bookworm-slim AS fetch
+ARG MBTILESERVER_VERSION=v0.11.0
+ARG TARGETARCH
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL -o /tmp/mbtileserver.zip "https://github.com/consbio/mbtileserver/releases/download/${MBTILESERVER_VERSION}/mbtileserver_${MBTILESERVER_VERSION}_linux_${TARGETARCH}.zip" \
+    && unzip -o /tmp/mbtileserver.zip -d /tmp/out \
+    && find /tmp/out -type f -name 'mbtileserver*' -exec mv {} /mbtileserver \; \
+    && chmod +x /mbtileserver
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY --from=fetch /mbtileserver /usr/local/bin/mbtileserver
+EXPOSE 8000
+ENTRYPOINT ["mbtileserver"]

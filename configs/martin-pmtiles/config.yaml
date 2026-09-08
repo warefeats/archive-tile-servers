@@ -1,0 +1,8 @@
+# Martin 1.16.0 serving one PMTiles archive. Tile cache disabled so every request reads the archive.
+listen_addresses: '0.0.0.0:3000'
+worker_processes: 4
+keep_alive: 75
+cache: disable
+pmtiles:
+  sources:
+    berlin: /tiles/berlin.pmtiles

@@ -1,0 +1,10 @@
+# BBOX tile server v0.6.2 (built from source, see Dockerfile.bbox) serving one MBTiles archive. No tile cache.
+[webserver]
+server_addr = "0.0.0.0:8080"
+worker_threads = 4
+loglevel = "Warn"
+
+[[tileset]]
+name = "berlin"
+[tileset.mbtiles]
+path = "/tiles/berlin.mbtiles"

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "archive-tile-servers-2026-09",
+  "slug": "pmtiles-mbtiles-tile-servers",
+  "category": "Tile servers",
+  "title": "Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX",
+  "deck": "Five open-source tile servers serving one pre-built vector tile archive of Berlin, as MBTiles and as PMTiles, with identical tiles in both: single-tile latency at four zoom levels, throughput at 10 and 100 clients, a random tile walk over 256 tiles, four-tile viewport bursts, cold start and memory.",
+  "unit": "ms",
+  "lowerIsBetter": true,
+  "verdict": {
+    "winnerId": "TBD",
+    "headline": "TBD",
+    "summary": "TBD"
+  },
+  "trademarks": [
+    "Martin is a project of the MapLibre organization.",
+    "go-pmtiles and the PMTiles format are developed by Protomaps.",
+    "tileserver-gl is developed by MapTiler.",
+    "mbtileserver is developed by the Conservation Biology Institute.",
+    "BBOX is developed by Sourcepole.",
+    "Planetiler is developed by Michael Barry and contributors; the tile schema is OpenMapTiles.",
+    "Map data: OpenStreetMap contributors, ODbL, via the Geofabrik Berlin extract of 2026-01-01; water polygons from OSMData, Natural Earth public domain."
+  ],
+  "limitations": [],
+  "runs": []
+}

@@ -1,0 +1,16 @@
+services:
+  engine:
+    image: ats-mbtileserver:0.11.0
+    build:
+      context: ..
+      dockerfile: Dockerfile.mbtileserver
+    command: ["--dir", "/tiles", "--port", "8000", "--tiles-only"]
+    volumes:
+      - ../data/cache/archives:/tiles:ro
+    ports:
+      - "127.0.0.1:${ENGINE_PORT:-8099}:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
