@@ -91,3 +91,37 @@ just import        # results.json -> runs/<date>-<rig>.json, appended to benchma
 ## Results
 
 See `runs/` for the published run files and the [benchmark page](https://warefeats.com/benchmarks/pmtiles-mbtiles-tile-servers/) for charts and the verdict.
+
+### Run 2026-09-08, M2 Max (local)
+
+Full protocol on the reference rig; the run file is [`runs/2026-09-08-m2-max.json`](runs/2026-09-08-m2-max.json). Verdict and limitations are in [`benchmark.json`](benchmark.json). Every request accepts gzip; the "no Accept-Encoding" column is the one pass that does not.
+
+| Candidate | Street level z14, 1 client (mean) | Same, no Accept-Encoding | Tiles/s at 10 clients | Tiles/s at 100 clients | p99 at 100 clients | Random walk, tiles/s at 10 clients | Viewport, 4 tiles (mean) | First tile after start (mean of 5) | RSS idle / after load |
+|-----------|----------------------------------:|-------------------------:|----------------------:|-----------------------:|-------------------:|-----------------------------------:|-------------------------:|-----------------------------------:|----------------------:|
+| Martin 1.16.0 (PMTiles) | 1.23 ms | 2.89 ms | 11,289 | 12,634 | 203 ms | 12,993 | 1.2 ms | 158 ms | 9 / 168 MB |
+| Martin 1.16.0 (MBTiles) | 1.17 ms | 2.85 ms | 11,145 | 9,185 | 14 ms | 13,724 | 1.2 ms | 153 ms | 10 / 63 MB |
+| go-pmtiles 1.31.2 | 1.98 ms | 1.97 ms | 2,472 | 4,514 | 109 ms | 4,533 | 1.9 ms | 157 ms | 13 / 44 MB |
+| tileserver-gl-light 5.6.0 | 14.30 ms | 13.97 ms | 301 | 281 | 449 ms | 793 | 18.7 ms | 276 ms | 46 / 309 MB |
+| mbtileserver 0.11.0 | 1.15 ms | 1.16 ms | 5,908 | 7,857 | 34 ms | 7,110 | 2.2 ms | 137 ms | 6 / 66 MB |
+| BBOX 0.6.2 (PMTiles) | 2.33 ms | 9.14 ms | 3,885 | 3,961 | 31 ms | 8,292 | 1.9 ms | 118 ms | 11 / 35 MB |
+| BBOX 0.6.2 (MBTiles) | 2.75 ms | 10.08 ms | 3,509 | 2,202 | 65 ms | 6,503 | 2.6 ms | 150 ms | 11 / 69 MB |
+
+District z12, region z9 and overview z5 tiles at one client: mbtileserver 0.92 / 0.84 / 0.72 ms, Martin (MBTiles) 0.82 / 0.84 / 0.88 ms, Martin (PMTiles) 1.09 / 0.98 / 0.96 ms, BBOX (PMTiles) 1.38 / 1.05 / 0.58 ms, BBOX (MBTiles) 1.41 / 1.01 / 0.57 ms, go-pmtiles 1.40 / 1.05 / 0.79 ms, tileserver-gl-light 3.59 / 2.75 / 1.63 ms. No candidate failed a request in any pass.
+
+Two things the table shows that the verdict leans on. First, the format matters less than the server: Martin's two sources are 0.06 ms apart on one tile, BBOX's 0.4 ms, and both move more tiles from PMTiles than from MBTiles under load (Martin 12,634 vs 9,185 at 100 clients, BBOX 3,961 vs 2,202), so on this rig a local PMTiles file is at least as fast as a local MBTiles file for the servers that read both. Second, the no-Accept-Encoding column is a protocol trap, not a server ranking: Martin and BBOX decompress the stored tile for a client that did not ask for gzip, the other three send `Content-Encoding: gzip` anyway. A first full run that sent no Accept-Encoding on every request ranked Martin and BBOX by that cost and was discarded.
+
+### Parity
+
+What each server returned for the test tiles with `Accept-Encoding: gzip`: transferred bytes / decoded features. All seven candidates returned the same feature counts and layers for every tile; tileserver-gl's bytes differ because it re-compresses.
+
+| Candidate | Street level z14 | District z12 | Region z9 | Overview z5 | Content-Encoding | Same tile, no Accept-Encoding |
+|-----------|-----------------:|-------------:|----------:|------------:|------------------|------------------------------:|
+| Martin (PMTiles) | 242,407 / 8,031 | 76,490 / 2,541 | 38,506 / 292 | 3,972 / 8 | gzip | 415,808 B, decompressed |
+| Martin (MBTiles) | 242,407 / 8,031 | 76,490 / 2,541 | 38,506 / 292 | 3,972 / 8 | gzip | 415,808 B, decompressed |
+| go-pmtiles | 242,407 / 8,031 | 76,490 / 2,541 | 38,506 / 292 | 3,972 / 8 | gzip | 242,407 B, still gzip |
+| tileserver-gl-light | 243,510 / 8,031 | 76,765 / 2,541 | 38,076 / 292 | 3,957 / 8 | gzip (re-compressed) | 243,510 B, still gzip |
+| mbtileserver | 242,407 / 8,031 | 76,490 / 2,541 | 38,506 / 292 | 3,972 / 8 | gzip | 242,407 B, still gzip |
+| BBOX (PMTiles) | 242,407 / 8,031 | 76,490 / 2,541 | 38,506 / 292 | 3,972 / 8 | gzip, no Content-Type | 415,808 B, decompressed |
+| BBOX (MBTiles) | 242,407 / 8,031 | 76,490 / 2,541 | 38,506 / 292 | 3,972 / 8 | gzip | 415,808 B, decompressed |
+
+The street-level tile carries 12 OpenMapTiles layers; the district tile 11, the region tile 10, the overview tile 6.

@@ -8,9 +8,9 @@
   "unit": "ms",
   "lowerIsBetter": true,
   "verdict": {
-    "winnerId": "TBD",
-    "headline": "TBD",
-    "summary": "TBD"
+    "winnerId": "martin-pmtiles",
+    "headline": "Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format; mbtileserver was fastest on a single tile by a tenth of a millisecond, go-pmtiles reached a third of Martin's throughput, and tileserver-gl paid 12 ms per tile for re-compressing every one",
+    "summary": "The servers differ far more than the two archive formats do. On one connection the four Rust and Go servers returned the 242 KB street-level tile in 1.2 to 2.8 ms with the format worth a tenth of a millisecond either way; tileserver-gl took 14 ms because it gunzips and re-gzips every stored tile before sending it. Under load the order was Martin, mbtileserver, go-pmtiles, BBOX, tileserver-gl, and there the format started to matter: Martin and BBOX both moved more tiles from PMTiles than from MBTiles at 100 clients and on the random walk, with the one caveat that Martin's PMTiles source showed a flat 200 ms p99 at 100 clients that its MBTiles source did not. Every server started in under 300 ms and idled under 50 MB; nothing failed a request. The scorecard below has the numbers per section; the limitations say what they do not mean."
   },
   "trademarks": [
     "Martin is a project of the MapLibre organization.",
@@ -21,6 +21,22 @@
     "Planetiler is developed by Michael Barry and contributors; the tile schema is OpenMapTiles.",
     "Map data: OpenStreetMap contributors, ODbL, via the Geofabrik Berlin extract of 2026-01-01; water polygons from OSMData, Natural Earth public domain."
   ],
-  "limitations": [],
-  "runs": []
+  "limitations": [
+    "One laptop: the server under test (4 CPUs, 4 GB) and the load generator shared a 12-core M2 Max under OrbStack. Numbers are relative to each other, not absolute capacity.",
+    "At the top of the table the harness is part of the measurement: 12,600 tiles a second of 242 KB is about 3 GB/s through the Docker port forward into oha on the same host. The gaps between Martin, mbtileserver and go-pmtiles are real in direction; their size at the top may be understated.",
+    "Every request sends Accept-Encoding: gzip, as browsers and MapLibre do, so a server can pass the stored gzip bytes through. The one pass without it shows what happens otherwise: Martin and BBOX honour the missing header and decompress the tile on every request (2.9 ms and 9 to 10 ms instead of 1.2 and 2.3 to 2.8 ms), while go-pmtiles, mbtileserver and tileserver-gl send Content-Encoding: gzip regardless. A first full run with no Accept-Encoding on every request ranked Martin and BBOX accordingly lower and was discarded as a fairness bug in the protocol, not in the servers.",
+    "tileserver-gl is measured as tileserver-gl-light, a single Node.js process without MapLibre Native. It gunzips every stored tile and re-gzips it before sending (243,510 bytes out for a 242,407-byte stored tile), which is where its 12 ms go. Server-side raster rendering, the reason many people run it, is not measured here.",
+    "go-pmtiles ran with its default 64 MB directory cache; it caches PMTiles directory entries, not tiles. go-pmtiles is designed to serve archives from object storage over HTTP range requests; a local file is the simplest case for it, not its common one.",
+    "Martin's PMTiles source showed a p99 of about 203 ms in every one of its eight 100-client passes while its MBTiles source stayed at 14 ms, and its container held 168 MB after load against 63 MB for MBTiles. Both are reported, neither is explained by this run.",
+    "The archive is 41 MB and sat entirely in the page cache after the warmups. This is hot-cache serving: server overhead, archive index lookup and delivery, not disk or object-storage behaviour. A planet-scale archive of 80 GB or more, where PMTiles directory lookups and the MBTiles SQLite index stop fitting in memory, is a different benchmark.",
+    "Planetiler built the MBTiles with --compact_db=false because BBOX 0.6.2 rejects Planetiler's default compact schema (tiles_shallow plus tiles_data). The flat tiles table is the standard MBTiles layout; the compact one would have been smaller and may serve differently.",
+    "Cold start is process start to first tile, so it includes opening the archive and reading its metadata; every server did it in 118 to 276 ms on average, and the spread between a server's five starts (BBOX PMTiles 61 to 135 ms) is of the same order as the gaps between servers below tileserver-gl.",
+    "Memory is Docker's reported usage for the container (cgroup usage minus inactive file cache), sampled once idle and once after the random walk.",
+    "BBOX sends no Content-Type header on tiles from its PMTiles source (it does from MBTiles); tileserver-gl's re-compressed tiles differ in size from the stored bytes. Feature counts and layers were identical for all seven candidates on all four test tiles.",
+    "mbtileserver ran from the project's linux_arm64 v0.11.0 release binary, packaged on debian:bookworm-slim, because its published image is amd64-only. BBOX ran from a source build of v0.6.2 for the same reason.",
+    "Single run on one day. No candidate failed a single request in any pass; every sample is in the run file."
+  ],
+  "runs": [
+    "runs/2026-09-08-m2-max.json"
+  ]
 }
