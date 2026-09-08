@@ -14,7 +14,7 @@ import {
   runSingleTile,
   runWalk,
 } from "./load-runner";
-import { ENGINE_META, ENGINES, type Engine, TILES, VIEWPORT, WALK, protocol } from "./matrix";
+import { ENGINE_META, ENGINES, type Engine, IDENTITY_HEADERS, TILES, VIEWPORT, WALK, protocol } from "./matrix";
 
 export interface EngineResult {
   engine: Engine;
@@ -105,7 +105,7 @@ for (const engine of engines) {
     console.log("  single-tile latency (1 connection)");
     const single: Record<string, SingleTileResult> = {};
     for (const spec of TILES) single[spec.id] = runSingleTile(engine, spec, plan);
-    single[`${marquee.id}-gzip`] = runSingleTile(engine, marquee, plan, { "Accept-Encoding": "gzip" });
+    single[`${marquee.id}-identity`] = runSingleTile(engine, marquee, plan, IDENTITY_HEADERS);
     console.log("  viewport burst");
     const burst = await runBurst(engine, plan);
     console.log("  concurrency");

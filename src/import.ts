@@ -107,11 +107,11 @@ export function buildSingleTileSection(raw: RawResults): BenchmarkSection {
         metrics[`${spec.id}-features`] = { value: parity.features, unit: "features", label: `${spec.title} features in tile` };
       }
     }
-    const gzipKey = `${marquee.id}-gzip`;
-    const gzipSingle = result.single[gzipKey];
-    const gzipParity = result.parity[marquee.id]?.gzip;
-    if (gzipSingle) metrics[`${gzipKey}-mean`] = { value: gzipSingle.meanMs, unit: "ms", label: `${marquee.title} mean latency, gzip negotiated` };
-    if (gzipParity) metrics[`${gzipKey}-bytes`] = { value: gzipParity.bytes, unit: "B", label: `${marquee.title} transferred bytes, gzip negotiated${gzipParity.contentEncoding ? "" : " (server sent it uncompressed)"}` };
+    const identityKey = `${marquee.id}-identity`;
+    const identitySingle = result.single[identityKey];
+    const identityParity = result.parity[marquee.id]?.identity;
+    if (identitySingle) metrics[`${identityKey}-mean`] = { value: identitySingle.meanMs, unit: "ms", label: `${marquee.title} mean latency, client without Accept-Encoding` };
+    if (identityParity) metrics[`${identityKey}-bytes`] = { value: identityParity.bytes, unit: "B", label: `${marquee.title} transferred bytes, client without Accept-Encoding${identityParity.contentEncoding ? ` (server sent ${identityParity.contentEncoding} anyway)` : ""}` };
     return candidate(result, result.single[marquee.id]?.samplesMs ?? [], metrics);
   });
   const tests: BenchmarkTest[] = TILES.filter((spec) => raw.results.every((r) => r.single[spec.id])).map((spec) => ({
@@ -122,15 +122,15 @@ export function buildSingleTileSection(raw: RawResults): BenchmarkSection {
     lowerIsBetter: true,
     results: raw.results.map((r) => ({ candidateId: r.engine, value: r.single[spec.id]!.meanMs })),
   }));
-  const gzipKey = `${marquee.id}-gzip`;
-  if (raw.results.every((r) => r.single[gzipKey])) {
+  const identityKey = `${marquee.id}-identity`;
+  if (raw.results.every((r) => r.single[identityKey])) {
     tests.push({
-      id: `mean-${gzipKey}`,
-      title: `${marquee.title}, gzip`,
-      description: `Mean latency over one connection when the client accepts gzip, as browsers do: the ${marquee.title.toLowerCase()} tile including whatever compression the server applies.`,
+      id: `mean-${identityKey}`,
+      title: `${marquee.title}, no Accept-Encoding`,
+      description: `Mean latency over one connection when the client sends no Accept-Encoding header: servers that honour it decompress the stored ${marquee.title.toLowerCase()} tile on every request, the others send the gzip bytes anyway.`,
       unit: "ms",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.single[gzipKey]!.meanMs })),
+      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.single[identityKey]!.meanMs })),
     });
   }
   const ranked = [...candidates].sort((a, b) => a.statistics.meanMs - b.statistics.meanMs);
@@ -145,7 +145,7 @@ export function buildSingleTileSection(raw: RawResults): BenchmarkSection {
     verdict: {
       winnerId: best.id,
       headline: `${best.name} returned the ${marquee.title.toLowerCase()} tile in ${fmtMs(best.statistics.meanMs)} on average; ${worst.name} took ${fmtMs(worst.statistics.meanMs)} (${ratio(worst.statistics.meanMs, best.statistics.meanMs)})`,
-      summary: `Sequential requests over a single keep-alive connection, ${raw.smoke ? "smoke" : "full"} protocol; per-pass means are the samples.`,
+      summary: `Sequential requests over a single keep-alive connection with Accept-Encoding: gzip, ${raw.smoke ? "smoke" : "full"} protocol; per-pass means are the samples.`,
     },
     candidates,
     tests,
@@ -425,7 +425,7 @@ if (import.meta.main) {
       warmups: 3,
       runs: 20,
       processModel: "One server container at a time reading one of two archives with identical tiles (berlin.mbtiles from Planetiler 0.10.2, berlin.pmtiles converted from it by go-pmtiles); 4 workers where the concept exists; 5 cold starts, 20 single-tile passes of 20 requests per tile, 20 four-tile viewport bursts, 8 passes of 12 s at 10 and at 100 connections on one tile, 8 passes of 12 s at 10 connections over 256 random tiles",
-      cacheState: "No server-side tile cache configured anywhere (go-pmtiles keeps its default 64 MB directory cache); archives in the page cache after warmups; tiles requested without Accept-Encoding except in the gzip variant",
+      cacheState: "No server-side tile cache configured anywhere (go-pmtiles keeps its default 64 MB directory cache); archives in the page cache after warmups; every request accepts gzip, as map clients do, except the identity variant",
       output: "oha 1.16.0 JSON (latency percentiles, request counts, status codes); Bun fetch for cold start, parity and viewport bursts; docker stats for RSS",
     },
   };

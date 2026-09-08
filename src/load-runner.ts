@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { containerRssMb, containerStartedAt, engineDown, engineLogs, engineUp } from "./compose";
-import { type Engine, type Protocol, TILE_REQUEST_HEADERS, type TileSpec, VIEWPORT, tileUrl, walkUrls } from "./matrix";
+import { type Engine, IDENTITY_HEADERS, type Protocol, TILE_REQUEST_HEADERS, type TileSpec, VIEWPORT, tileUrl, walkUrls } from "./matrix";
 import { type LayerSummary, summarizeTile, totalFeatures } from "./mvt";
 import { mean, percentile, round } from "./stats";
 import { gunzipSync } from "node:zlib";
@@ -31,6 +31,13 @@ interface OhaJson {
   latencyPercentiles?: Record<string, number>;
   statusCodeDistribution?: Record<string, number>;
   errorDistribution?: Record<string, number>;
+}
+
+/** The standard tile headers with `overrides` applied; an empty override value removes the header. */
+export function requestHeaders(overrides?: Record<string, string>): Record<string, string> {
+  const merged: Record<string, string> = { ...TILE_REQUEST_HEADERS, ...(overrides ?? {}) };
+  for (const [name, value] of Object.entries(merged)) if (value === "") delete merged[name];
+  return merged;
 }
 
 /** oha's label for requests still in flight when a `-z` pass ends. */
@@ -81,7 +88,7 @@ export function oha(url: string, opts: OhaOptions): OhaPass {
   const args = ["oha", "--output-format", "json", "--no-tui", "--disable-compression", "-t", `${opts.timeoutSeconds}s`, "-c", String(opts.connections)];
   if (opts.requests !== undefined) args.push("-n", String(opts.requests));
   if (opts.durationSeconds !== undefined) args.push("-z", `${opts.durationSeconds}s`);
-  for (const [name, value] of Object.entries({ ...TILE_REQUEST_HEADERS, ...(opts.headers ?? {}) })) args.push("-H", `${name}: ${value}`);
+  for (const [name, value] of Object.entries(requestHeaders(opts.headers))) args.push("-H", `${name}: ${value}`);
   if (opts.urlsFromFile) args.push("--urls-from-file", opts.urlsFromFile);
   else args.push(url);
   const budgetMs = ((opts.durationSeconds ?? 0) + opts.timeoutSeconds * (opts.requests !== undefined ? Math.ceil(opts.requests / opts.connections) + 1 : 2)) * 1000 + 30_000;
@@ -101,13 +108,13 @@ export interface TileFetch {
 
 /**
  * One GET with the standard tile headers plus whatever is given, and nothing else. `fetch` would add
- * an Accept-Encoding header of its own, which changes what some servers return (Tegola gzips for
- * any value but an absent header), so the raw http client is used and the body is kept as sent.
+ * an Accept-Encoding header of its own and would decompress the body, so the raw http client is
+ * used and the body is kept as sent.
  */
 export function fetchTile(url: string, opts: { timeoutMs?: number; headers?: Record<string, string> } = {}): Promise<TileFetch> {
   const started = performance.now();
   return new Promise((resolve, reject) => {
-    const req = httpRequest(url, { method: "GET", headers: { ...TILE_REQUEST_HEADERS, ...(opts.headers ?? {}) }, timeout: opts.timeoutMs ?? 120_000 }, (res) => {
+    const req = httpRequest(url, { method: "GET", headers: requestHeaders(opts.headers), timeout: opts.timeoutMs ?? 120_000 }, (res) => {
       const chunks: Buffer[] = [];
       res.on("data", (chunk: Buffer) => chunks.push(chunk));
       res.on("end", () => {
@@ -186,8 +193,8 @@ export interface ParityResult {
   layers: LayerSummary[];
   features: number;
   decodeError?: string;
-  /** What the server sends when the client accepts gzip: encoding and transferred bytes. */
-  gzip?: { status: number; bytes: number; contentEncoding: string | null };
+  /** What the server sends to a client without Accept-Encoding: encoding and transferred bytes. */
+  identity?: { status: number; bytes: number; contentEncoding: string | null };
 }
 
 /** Fetch each benchmark tile once and describe what came back: size, layers, feature counts. */
@@ -205,7 +212,7 @@ export async function runParity(engine: Engine, tiles: readonly TileSpec[]): Pro
         decodeError = error instanceof Error ? error.message : String(error);
       }
     }
-    const gz = await fetchTile(url, { headers: { "Accept-Encoding": "gzip" } });
+    const id = await fetchTile(url, { headers: IDENTITY_HEADERS });
     out[spec.id] = {
       status: fetched.status,
       bytes: fetched.bytes,
@@ -214,9 +221,9 @@ export async function runParity(engine: Engine, tiles: readonly TileSpec[]): Pro
       layers,
       features: totalFeatures(layers),
       ...(decodeError ? { decodeError } : {}),
-      gzip: { status: gz.status, bytes: gz.bytes, contentEncoding: gz.contentEncoding },
+      identity: { status: id.status, bytes: id.bytes, contentEncoding: id.contentEncoding },
     };
-    console.log(`    parity ${spec.id}: ${fetched.status} ${fetched.bytes} B${fetched.contentEncoding ? ` (${fetched.contentEncoding})` : ""}, ${totalFeatures(layers)} features in ${layers.length} layer(s); gzip-negotiated ${gz.bytes} B${decodeError ? ` (decode error: ${decodeError})` : ""}`);
+    console.log(`    parity ${spec.id}: ${fetched.status} ${fetched.bytes} B${fetched.contentEncoding ? ` (${fetched.contentEncoding})` : ""}, ${totalFeatures(layers)} features in ${layers.length} layer(s); without Accept-Encoding ${id.bytes} B${id.contentEncoding ? ` (${id.contentEncoding})` : ""}${decodeError ? ` (decode error: ${decodeError})` : ""}`);
   }
   return out;
 }
@@ -266,7 +273,7 @@ export function runSingleTile(engine: Engine, spec: TileSpec, protocol: Protocol
     errorRate: requests > 0 ? round(failures / requests, 4) : 1,
     bytesPerRequest: bytes,
   };
-  console.log(`    ${spec.id}${headers ? " (gzip)" : ""} c=1: mean ${result.meanMs} ms, p99 ${result.p99Ms} ms over ${requests} requests, errors ${(result.errorRate * 100).toFixed(1)}%`);
+  console.log(`    ${spec.id}${headers ? " (identity)" : ""} c=1: mean ${result.meanMs} ms, p99 ${result.p99Ms} ms over ${requests} requests, errors ${(result.errorRate * 100).toFixed(1)}%`);
   return result;
 }
 

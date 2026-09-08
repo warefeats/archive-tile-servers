@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { fetchTile, waitForTile } from "../src/load-runner";
+import { fetchTile, requestHeaders, waitForTile } from "../src/load-runner";
+import { IDENTITY_HEADERS } from "../src/matrix";
 
 let server: ReturnType<typeof Bun.serve>;
 const seen: Record<string, string>[] = [];
@@ -21,7 +22,7 @@ afterAll(() => {
 });
 
 describe("tile fetch", () => {
-  test("sends the MVT Accept header and no Accept-Encoding by default", async () => {
+  test("sends the MVT Accept header and Accept-Encoding: gzip by default", async () => {
     const result = await fetchTile(`http://127.0.0.1:${server.port}/tile`);
     expect(result.status).toBe(200);
     expect(result.bytes).toBe(3);
@@ -29,12 +30,14 @@ describe("tile fetch", () => {
     expect(result.contentEncoding).toBeNull();
     const headers = seen[seen.length - 1]!;
     expect(headers["accept"]).toBe("application/vnd.mapbox-vector-tile");
-    expect(headers["accept-encoding"]).toBeUndefined();
+    expect(headers["accept-encoding"]).toBe("gzip");
   });
 
-  test("passes extra headers through", async () => {
-    await fetchTile(`http://127.0.0.1:${server.port}/tile`, { headers: { "Accept-Encoding": "gzip" } });
-    expect(seen[seen.length - 1]!["accept-encoding"]).toBe("gzip");
+  test("an empty override removes the header, so the identity variant sends no Accept-Encoding", async () => {
+    await fetchTile(`http://127.0.0.1:${server.port}/tile`, { headers: IDENTITY_HEADERS });
+    expect(seen[seen.length - 1]!["accept-encoding"]).toBeUndefined();
+    expect(requestHeaders(IDENTITY_HEADERS)).toEqual({ Accept: "application/vnd.mapbox-vector-tile" });
+    expect(requestHeaders({ "X-Test": "1" })).toEqual({ Accept: "application/vnd.mapbox-vector-tile", "Accept-Encoding": "gzip", "X-Test": "1" });
   });
 
   test("waits for a 200 and gives up on a 404 within the deadline", async () => {

@@ -15,7 +15,7 @@ function engineResult(engine: Engine, scale: number): EngineResult {
     errorRate: 0,
     bytesPerRequest: 40000,
   });
-  const parity = { status: 200, bytes: 40000, contentType: "application/x-protobuf", contentEncoding: null, layers: [{ name: "buildings", version: 2, extent: 4096, features: 700, geometryTypes: { polygon: 700 } }], features: 700, gzip: { status: 200, bytes: 26000, contentEncoding: "gzip" } };
+  const parity = { status: 200, bytes: 40000, contentType: "application/x-protobuf", contentEncoding: null, layers: [{ name: "buildings", version: 2, extent: 4096, features: 700, geometryTypes: { polygon: 700 } }], features: 700, identity: { status: 200, bytes: 60000, contentEncoding: null } };
   return {
     engine,
     image: `${engine}:test`,
@@ -23,7 +23,7 @@ function engineResult(engine: Engine, scale: number): EngineResult {
     durationS: 60,
     coldStart: { samplesMs: [500 * scale, 520 * scale, 480 * scale], idleRssMb: 50 * scale },
     parity: { "city-z14": parity, "district-z12": parity, "region-z9": parity, "country-z5": parity },
-    single: { "city-z14": tile(20 * scale), "district-z12": tile(15 * scale), "region-z9": tile(10 * scale), "country-z5": tile(30 * scale), "city-z14-gzip": tile(25 * scale) },
+    single: { "city-z14": tile(20 * scale), "district-z12": tile(15 * scale), "region-z9": tile(10 * scale), "country-z5": tile(30 * scale), "city-z14-identity": tile(25 * scale) },
     burst: { samplesMs: [40 * scale, 42 * scale, 38 * scale], meanMs: 40 * scale, p50Ms: 40 * scale, maxMs: 42 * scale, slowestTileMeanMs: 30 * scale, errorRate: 0 },
     concurrency: {
       "10": { connections: 10, samplesP99Ms: [50 * scale, 55 * scale], samplesRps: [200 / scale, 210 / scale], rps: 205 / scale, p50Ms: 30 * scale, p99Ms: 52 * scale, errorRate: 0, completed: 4000, transportErrors: 0, statusCodes: { "200": 4000 }, errorDistribution: {}, minCompletedPerPass: 1900 },
@@ -73,7 +73,7 @@ describe("run import", () => {
 
   test("builds the five sections with their tests", () => {
     expect(run.sections.map((s) => s.id)).toEqual(["single-tile-latency", "concurrency", "random-walk", "viewport-burst", "cold-start"]);
-    expect(run.sections[0]!.tests.map((t) => t.id)).toEqual(["mean-city-z14", "mean-district-z12", "mean-region-z9", "mean-country-z5", "mean-city-z14-gzip"]);
+    expect(run.sections[0]!.tests.map((t) => t.id)).toEqual(["mean-city-z14", "mean-district-z12", "mean-region-z9", "mean-country-z5", "mean-city-z14-identity"]);
     expect(run.sections[1]!.tests.map((t) => t.id)).toEqual(["rps-c10", "rps-c100", "p99-c10", "p99-c100", "errors-c100"]);
     expect(run.sections[2]!.tests.map((t) => t.id)).toEqual(["walk-rps", "walk-p99"]);
     expect(run.sections[3]!.tests.map((t) => t.id)).toEqual(["burst-mean", "burst-max"]);
@@ -92,8 +92,8 @@ describe("run import", () => {
     expect(martin.samplesMs).toEqual([18, 20, 22]);
     expect(martin.statistics).toEqual({ medianMs: 20, meanMs: 20, minMs: 18, maxMs: 22 });
     expect(martin.metrics?.["city-z14-bytes"]?.value).toBe(40000);
-    expect(martin.metrics?.["city-z14-gzip-bytes"]?.value).toBe(26000);
-    expect(martin.metrics?.["city-z14-gzip-mean"]?.value).toBe(25);
+    expect(martin.metrics?.["city-z14-identity-bytes"]?.value).toBe(60000);
+    expect(martin.metrics?.["city-z14-identity-mean"]?.value).toBe(25);
     const concurrency = run.sections[1]!.candidates.find((c) => c.id === "martin-pmtiles")!;
     expect(concurrency.samplesMs).toEqual([220, 230]);
     expect(run.sections[1]!.lowerIsBetter).toBe(false);

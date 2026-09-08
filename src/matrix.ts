@@ -97,12 +97,15 @@ export const ENGINE_META: Record<Engine, EngineMeta> = {
 };
 
 /**
- * Sent with every tile request, to every server. No Accept-Encoding by default: tiles in both
- * archives are gzip-compressed, so what a server does for a client that did not ask for gzip
- * (pass the bytes through, or decompress) is part of what is measured; the explicit gzip variant
- * is the browser case.
+ * Sent with every tile request, to every server. Tiles in both archives are stored gzip-compressed
+ * and every map client accepts gzip, so the default request does too: a server can then hand the
+ * stored bytes through. The explicit identity variant (no Accept-Encoding) shows what each server
+ * does for a client that did not ask for gzip: pass the bytes through anyway, or decompress.
  */
-export const TILE_REQUEST_HEADERS: Readonly<Record<string, string>> = { Accept: "application/vnd.mapbox-vector-tile" };
+export const TILE_REQUEST_HEADERS: Readonly<Record<string, string>> = { Accept: "application/vnd.mapbox-vector-tile", "Accept-Encoding": "gzip" };
+
+/** Header overrides for the identity variant: an empty value removes the header from the request. */
+export const IDENTITY_HEADERS: Readonly<Record<string, string>> = { "Accept-Encoding": "" };
 
 export type TileId = "city-z14" | "district-z12" | "region-z9" | "country-z5";
 
