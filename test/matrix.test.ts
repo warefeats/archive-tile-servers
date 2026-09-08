@@ -28,14 +28,16 @@ describe("engine matrix", () => {
     expect(TILE_REQUEST_HEADERS["Accept"]).toBe("application/vnd.mapbox-vector-tile");
   });
 
-  test("the viewport is the marquee tile's four children", () => {
+  test("the viewport is a 2x2 block of z14 tiles starting at the marquee", () => {
     const marquee = TILES[0]!;
     expect(VIEWPORT.tiles).toHaveLength(4);
-    for (const child of VIEWPORT.tiles) {
-      expect(child.z).toBe(marquee.tile.z + 1);
-      expect(Math.floor(child.x / 2)).toBe(marquee.tile.x);
-      expect(Math.floor(child.y / 2)).toBe(marquee.tile.y);
+    expect(VIEWPORT.tiles[0]).toEqual(marquee.tile);
+    for (const t of VIEWPORT.tiles) {
+      expect(t.z).toBe(marquee.tile.z);
+      expect(t.x - marquee.tile.x).toBeLessThanOrEqual(1);
+      expect(t.y - marquee.tile.y).toBeLessThanOrEqual(1);
     }
+    expect(new Set(VIEWPORT.tiles.map((t) => `${t.x}/${t.y}`)).size).toBe(4);
   });
 
   test("the walk covers every tile of its block once, in a fixed order, and contains the marquee", () => {
