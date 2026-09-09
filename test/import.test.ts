@@ -71,9 +71,10 @@ describe("run import", () => {
     expect(run.sections[0]!.candidates.map((c) => c.id)).toEqual(["martin-pmtiles", "go-pmtiles"]);
   });
 
-  test("builds the five sections with their tests", () => {
+  test("builds the five sections with their tests, and never ranks the identity pass", () => {
+    expect(run.sections[0]!.tests.some((t) => t.id.includes("identity"))).toBe(false);
     expect(run.sections.map((s) => s.id)).toEqual(["single-tile-latency", "concurrency", "random-walk", "viewport-burst", "cold-start"]);
-    expect(run.sections[0]!.tests.map((t) => t.id)).toEqual(["mean-city-z14", "mean-district-z12", "mean-region-z9", "mean-country-z5", "mean-city-z14-identity"]);
+    expect(run.sections[0]!.tests.map((t) => t.id)).toEqual(["mean-city-z14", "mean-district-z12", "mean-region-z9", "mean-country-z5"]);
     expect(run.sections[1]!.tests.map((t) => t.id)).toEqual(["rps-c10", "rps-c100", "p99-c10", "p99-c100", "errors-c100"]);
     expect(run.sections[2]!.tests.map((t) => t.id)).toEqual(["walk-rps", "walk-p99"]);
     expect(run.sections[3]!.tests.map((t) => t.id)).toEqual(["burst-mean", "burst-max"]);

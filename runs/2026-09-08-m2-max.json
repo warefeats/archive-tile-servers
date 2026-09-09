@@ -151,7 +151,7 @@
             "city-z14-identity-mean": {
               "value": 2.89,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -278,7 +278,7 @@
             "city-z14-identity-mean": {
               "value": 2.852,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -405,7 +405,7 @@
             "city-z14-identity-mean": {
               "value": 1.965,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 242407,
@@ -532,7 +532,7 @@
             "city-z14-identity-mean": {
               "value": 13.971,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 243510,
@@ -659,7 +659,7 @@
             "city-z14-identity-mean": {
               "value": 1.16,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 242407,
@@ -786,7 +786,7 @@
             "city-z14-identity-mean": {
               "value": 9.143,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -913,7 +913,7 @@
             "city-z14-identity-mean": {
               "value": 10.077,
               "unit": "ms",
-              "label": "Street level z14 mean latency, client without Accept-Encoding"
+              "label": "Street level z14 mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)"
             },
             "city-z14-identity-bytes": {
               "value": 415808,
@@ -1069,43 +1069,6 @@
             {
               "candidateId": "bbox-mbtiles",
               "value": 0.572
-            }
-          ]
-        },
-        {
-          "id": "mean-city-z14-identity",
-          "title": "Street level z14, no Accept-Encoding",
-          "description": "Mean latency over one connection when the client sends no Accept-Encoding header: servers that honour it decompress the stored street level z14 tile on every request, the others send the gzip bytes anyway.",
-          "unit": "ms",
-          "lowerIsBetter": true,
-          "results": [
-            {
-              "candidateId": "martin-pmtiles",
-              "value": 2.89
-            },
-            {
-              "candidateId": "martin-mbtiles",
-              "value": 2.852
-            },
-            {
-              "candidateId": "go-pmtiles",
-              "value": 1.965
-            },
-            {
-              "candidateId": "tileserver-gl",
-              "value": 13.971
-            },
-            {
-              "candidateId": "mbtileserver",
-              "value": 1.16
-            },
-            {
-              "candidateId": "bbox-pmtiles",
-              "value": 9.143
-            },
-            {
-              "candidateId": "bbox-mbtiles",
-              "value": 10.077
             }
           ]
         }

@@ -110,7 +110,7 @@ export function buildSingleTileSection(raw: RawResults): BenchmarkSection {
     const identityKey = `${marquee.id}-identity`;
     const identitySingle = result.single[identityKey];
     const identityParity = result.parity[marquee.id]?.identity;
-    if (identitySingle) metrics[`${identityKey}-mean`] = { value: identitySingle.meanMs, unit: "ms", label: `${marquee.title} mean latency, client without Accept-Encoding` };
+    if (identitySingle) metrics[`${identityKey}-mean`] = { value: identitySingle.meanMs, unit: "ms", label: `${marquee.title} mean latency for a client without Accept-Encoding (recorded, not ranked: a server may honour the missing header and decompress, or send gzip regardless)` };
     if (identityParity) metrics[`${identityKey}-bytes`] = { value: identityParity.bytes, unit: "B", label: `${marquee.title} transferred bytes, client without Accept-Encoding${identityParity.contentEncoding ? ` (server sent ${identityParity.contentEncoding} anyway)` : ""}` };
     return candidate(result, result.single[marquee.id]?.samplesMs ?? [], metrics);
   });
@@ -122,17 +122,9 @@ export function buildSingleTileSection(raw: RawResults): BenchmarkSection {
     lowerIsBetter: true,
     results: raw.results.map((r) => ({ candidateId: r.engine, value: r.single[spec.id]!.meanMs })),
   }));
-  const identityKey = `${marquee.id}-identity`;
-  if (raw.results.every((r) => r.single[identityKey])) {
-    tests.push({
-      id: `mean-${identityKey}`,
-      title: `${marquee.title}, no Accept-Encoding`,
-      description: `Mean latency over one connection when the client sends no Accept-Encoding header: servers that honour it decompress the stored ${marquee.title.toLowerCase()} tile on every request, the others send the gzip bytes anyway.`,
-      unit: "ms",
-      lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.single[identityKey]!.meanMs })),
-    });
-  }
+  // The pass without Accept-Encoding is deliberately not a ranked test: Martin and BBOX honour the
+  // missing header and decompress the stored tile, the others send gzip regardless, and ranking that
+  // would charge a server for following the request. It stays on record in the candidate metrics.
   const ranked = [...candidates].sort((a, b) => a.statistics.meanMs - b.statistics.meanMs);
   const best = ranked[0]!;
   const worst = ranked[ranked.length - 1]!;
