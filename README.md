@@ -1,6 +1,6 @@
 # Martin vs go-pmtiles vs tileserver-gl vs mbtileserver vs BBOX — serving a pre-built tile archive
 
-The runner behind [warefeats.com/benchmarks/pmtiles-mbtiles-tile-servers/](https://warefeats.com/benchmarks/pmtiles-mbtiles-tile-servers/). Five open-source tile servers serve one pre-built vector tile archive of Berlin, stored once as MBTiles and once as PMTiles with byte-identical tiles, and this runner measures single-tile latency at four zoom levels, throughput under 10 and 100 concurrent clients on one tile, throughput over a 256-tile random walk, four-tile viewport bursts, time to first tile after a cold start, and resident memory. Part of the [warefeats](https://warefeats.com) benchmark suite and the sibling of [vector-tile-servers](https://github.com/warefeats/vector-tile-servers), which measures the same kind of servers generating tiles from PostGIS instead.
+The runner behind [warefeats.com/posts/2026-09-08-archive-tile-servers-martin-vs-go-pmtiles-vs-tileserver-gl-vs-mbtileserver-vs-bbox/](https://warefeats.com/posts/2026-09-08-archive-tile-servers-martin-vs-go-pmtiles-vs-tileserver-gl-vs-mbtileserver-vs-bbox/). Five open-source tile servers serve one pre-built vector tile archive of Berlin, stored once as MBTiles and once as PMTiles with byte-identical tiles, and this runner measures single-tile latency at four zoom levels, throughput under 10 and 100 concurrent clients on one tile, throughput over a 256-tile random walk, four-tile viewport bursts, time to first tile after a cold start, and resident memory. Part of the [warefeats](https://warefeats.com) benchmark suite and the sibling of [vector-tile-servers](https://github.com/warefeats/vector-tile-servers), which measures the same kind of servers generating tiles from PostGIS instead.
 
 ## Why this matrix
 
@@ -90,7 +90,7 @@ just import        # results.json -> runs/<date>-<rig>.json, appended to benchma
 
 ## Results
 
-See `runs/` for the published run files and the [benchmark page](https://warefeats.com/benchmarks/pmtiles-mbtiles-tile-servers/) for charts and the verdict.
+See `runs/` for the published run files and the [post](https://warefeats.com/posts/2026-09-08-archive-tile-servers-martin-vs-go-pmtiles-vs-tileserver-gl-vs-mbtileserver-vs-bbox/) for charts and the verdict.
 
 ### Run 2026-09-08, M2 Max (local)
 
