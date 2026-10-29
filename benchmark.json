@@ -8,6 +8,7 @@
   "deck": "Five open-source tile servers serving one pre-built vector tile archive of Berlin, as MBTiles and as PMTiles, with identical tiles in both: single-tile latency at four zoom levels, throughput at 10 and 100 clients, a random tile walk over 256 tiles, four-tile viewport bursts, cold start and memory.",
   "unit": "ms",
   "lowerIsBetter": true,
+  "sectionSamples": "repeats",
   "verdict": {
     "winnerId": "martin-pmtiles",
     "headline": "Martin served 12,600 tiles a second at 100 clients from the PMTiles archive, more than any other server from either format; mbtileserver was fastest on a single tile by a tenth of a millisecond, go-pmtiles reached a third of Martin's throughput, and tileserver-gl paid 12 ms per tile for re-compressing every one",
