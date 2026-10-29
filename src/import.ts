@@ -25,13 +25,24 @@ export interface Candidate {
   metrics?: Record<string, Metric>;
 }
 
+/** How a test's `value` summarizes each candidate's samples. "other": a value the site cannot recompute from the per-pass numbers (a median pooled over every request of every pass, a percentile of the per-pass numbers, a ratio); the test's description says what it is. */
+export type TestStatistic = "mean" | "median" | "min" | "max" | "other";
+
+export interface TestResult {
+  candidateId: string;
+  value: number;
+  /** One measurement per measured pass, in the test's unit and in pass order: exactly the array `value` was computed from. */
+  samples?: number[];
+}
+
 export interface BenchmarkTest {
   id: string;
   title: string;
   description: string;
   unit: string;
   lowerIsBetter: boolean;
-  results: { candidateId: string; value: number }[];
+  results: TestResult[];
+  statistic?: TestStatistic;
 }
 
 export interface BenchmarkSection {
@@ -78,6 +89,17 @@ function candidate(result: EngineResult, samples: number[], metrics: Record<stri
   };
 }
 
+/** One candidate's row of a test: its value and, when the value summarizes per-pass measurements, the array it was computed from. */
+function row(candidateId: string, value: number, samples?: number[]): TestResult {
+  return samples ? { candidateId, value, samples } : { candidateId, value };
+}
+
+/** The per-pass values of the passes that completed a request, the array a per-pass median is over; nothing when no pass completed one. */
+function measured(samples: (number | null)[]): number[] | undefined {
+  const completed = samples.filter((sample): sample is number => sample !== null);
+  return completed.length > 0 ? completed : undefined;
+}
+
 function ratio(a: number, b: number): string {
   return `${(a / b).toFixed(1)}x`;
 }
@@ -120,7 +142,11 @@ export function buildSingleTileSection(raw: RawResults): BenchmarkSection {
     description: `Mean latency over one connection. ${spec.description}`,
     unit: "ms",
     lowerIsBetter: true,
-    results: raw.results.map((r) => ({ candidateId: r.engine, value: r.single[spec.id]!.meanMs })),
+    results: raw.results.map((r) => {
+      const single = r.single[spec.id]!;
+      return row(r.engine, single.meanMs, single.samplesMs);
+    }),
+    statistic: "mean",
   }));
   // The pass without Accept-Encoding is deliberately not a ranked test: Martin and BBOX honour the
   // missing header and decompress the stored tile, the others send gzip regardless, and ranking that
@@ -173,17 +199,25 @@ export function buildConcurrencySection(raw: RawResults): BenchmarkSection {
       description: `Successful ${marquee.title.toLowerCase()} tiles per second with ${level} closed-loop clients.`,
       unit: "req/s",
       lowerIsBetter: false,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.concurrency[String(level)]!.rps })),
+      results: raw.results.map((r) => {
+        const c = r.concurrency[String(level)]!;
+        return row(r.engine, c.rps, c.samplesRps);
+      }),
+      statistic: "mean",
     });
   }
   for (const level of levels) {
     tests.push({
       id: `p99-c${level}`,
       title: `p99 latency, ${level} connections`,
-      description: `Median across passes of each pass's p99 response time at ${level} connections. A server that completed no request in a pass is charged the whole ${passMs / 1000} s pass.`,
+      description: `Median across passes of each pass's p99 response time at ${level} connections. A pass in which a server completed no request is left out of its median; a server that completed no request in any pass is charged the whole ${passMs / 1000} s pass.`,
       unit: "ms",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.concurrency[String(level)]!.p99Ms ?? passMs })),
+      results: raw.results.map((r) => {
+        const c = r.concurrency[String(level)]!;
+        return row(r.engine, c.p99Ms ?? passMs, measured(c.samplesP99Ms));
+      }),
+      statistic: "median",
     });
   }
   tests.push({
@@ -192,7 +226,8 @@ export function buildConcurrencySection(raw: RawResults): BenchmarkSection {
     description: `Non-2xx responses plus connection errors and 60 s timeouts as a share of all requests at ${top} connections.`,
     unit: "%",
     lowerIsBetter: true,
-    results: raw.results.map((r) => ({ candidateId: r.engine, value: round(r.concurrency[String(top)]!.errorRate * 100, 2) })),
+    results: raw.results.map((r) => row(r.engine, round(r.concurrency[String(top)]!.errorRate * 100, 2))),
+    statistic: "other",
   });
   const ranked = [...candidates].sort((a, b) => b.statistics.meanMs - a.statistics.meanMs);
   const best = ranked[0]!;
@@ -234,15 +269,17 @@ export function buildWalkSection(raw: RawResults): BenchmarkSection {
       description: `Successful tiles per second when ${connections} closed-loop clients each request a random z14 tile from a ${tiles}-tile block of central Berlin.`,
       unit: "req/s",
       lowerIsBetter: false,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.walk.rps })),
+      results: raw.results.map((r) => row(r.engine, r.walk.rps, r.walk.samplesRps)),
+      statistic: "mean",
     },
     {
       id: "walk-p99",
       title: `p99 latency, ${connections} connections`,
-      description: `Median across passes of each pass's p99 response time on the random walk. A server that completed no request in a pass is charged the whole ${passMs / 1000} s pass.`,
+      description: `Median across passes of each pass's p99 response time on the random walk. A pass in which a server completed no request is left out of its median; a server that completed no request in any pass is charged the whole ${passMs / 1000} s pass.`,
       unit: "ms",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.walk.p99Ms ?? passMs })),
+      results: raw.results.map((r) => row(r.engine, r.walk.p99Ms ?? passMs, measured(r.walk.samplesP99Ms))),
+      statistic: "median",
     },
   ];
   const ranked = [...candidates].sort((a, b) => b.statistics.meanMs - a.statistics.meanMs);
@@ -280,7 +317,8 @@ export function buildBurstSection(raw: RawResults): BenchmarkSection {
       description: "Mean wall time until all four z14 tiles have arrived, requested in parallel.",
       unit: "ms",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.burst.meanMs })),
+      results: raw.results.map((r) => row(r.engine, r.burst.meanMs, r.burst.samplesMs)),
+      statistic: "mean",
     },
     {
       id: "burst-max",
@@ -288,7 +326,8 @@ export function buildBurstSection(raw: RawResults): BenchmarkSection {
       description: "The slowest of the measured viewport loads.",
       unit: "ms",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: r.burst.maxMs })),
+      results: raw.results.map((r) => row(r.engine, r.burst.maxMs, r.burst.samplesMs)),
+      statistic: "max",
     },
   ];
   const ranked = [...candidates].sort((a, b) => a.statistics.meanMs - b.statistics.meanMs);
@@ -326,7 +365,8 @@ export function buildColdStartSection(raw: RawResults): BenchmarkSection {
       description: "Mean time from container process start until the street-level tile is served, including opening the archive and reading its metadata, over five starts.",
       unit: "ms",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: round(mean(r.coldStart.samplesMs), 0) })),
+      results: raw.results.map((r) => row(r.engine, round(mean(r.coldStart.samplesMs), 0), r.coldStart.samplesMs)),
+      statistic: "mean",
     },
     {
       id: "idle-rss",
@@ -334,7 +374,11 @@ export function buildColdStartSection(raw: RawResults): BenchmarkSection {
       description: "Container RSS five seconds after the first tile, before any load.",
       unit: "MB",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: round(r.coldStart.idleRssMb, 1) })),
+      results: raw.results.map((r) => {
+        const value = round(r.coldStart.idleRssMb, 1);
+        return row(r.engine, value, [value]);
+      }),
+      statistic: "mean",
     },
     {
       id: "loaded-rss",
@@ -342,7 +386,11 @@ export function buildColdStartSection(raw: RawResults): BenchmarkSection {
       description: "Container RSS right after the concurrency passes.",
       unit: "MB",
       lowerIsBetter: true,
-      results: raw.results.map((r) => ({ candidateId: r.engine, value: round(r.rssAfterLoadMb, 1) })),
+      results: raw.results.map((r) => {
+        const value = round(r.rssAfterLoadMb, 1);
+        return row(r.engine, value, [value]);
+      }),
+      statistic: "mean",
     },
   ];
   const ranked = [...candidates].sort((a, b) => a.statistics.meanMs - b.statistics.meanMs);
@@ -364,6 +412,11 @@ export function buildColdStartSection(raw: RawResults): BenchmarkSection {
   };
 }
 
+/** Every section of a run, in page order. */
+export function buildSections(raw: RawResults): BenchmarkSection[] {
+  return [buildSingleTileSection(raw), buildConcurrencySection(raw), buildWalkSection(raw), buildBurstSection(raw), buildColdStartSection(raw)];
+}
+
 export function buildRun(raw: RawResults, meta: RunMetadata): RunFile {
   const results = validateResults(raw);
   return {
@@ -374,7 +427,7 @@ export function buildRun(raw: RawResults, meta: RunMetadata): RunFile {
     environment: meta.environment,
     protocol: meta.protocol,
     candidates: [],
-    sections: [buildSingleTileSection(results), buildConcurrencySection(results), buildWalkSection(results), buildBurstSection(results), buildColdStartSection(results)],
+    sections: buildSections(results),
   };
 }
 

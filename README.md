@@ -84,6 +84,7 @@ just build-images  # BBOX from source, mbtileserver from its release binary
 just smoke         # short protocol, every engine
 just bench         # full protocol; results.json
 just import        # results.json -> runs/<date>-<rig>.json, appended to benchmark.json
+just enrich RUN    # add each test's statistic and per-pass samples from results.json to the run file RUN, published without them
 ```
 
 `just bench --engine=go-pmtiles,martin-pmtiles` restricts the run; `--resume` skips engines already in `results.json`.
